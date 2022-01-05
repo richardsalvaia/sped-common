@@ -147,7 +147,7 @@ abstract class SoapBase implements SoapInterface
      * @var int
      */
     public $waitingTime = 45;
-
+    
     /**
      * SoapBase constructor.
      * @param Certificate|null $certificate
@@ -204,7 +204,7 @@ abstract class SoapBase implements SoapInterface
     {
         return $this->disableCertValidation = $flag;
     }
-
+    
     /**
      * Force http protocol version
      *
@@ -226,7 +226,7 @@ abstract class SoapBase implements SoapInterface
                 $this->httpver = CURL_HTTP_VERSION_NONE;
         }
     }
-
+    
     /**
      * Load path to CA and enable to use on SOAP
      * @param string $capath
@@ -250,7 +250,7 @@ abstract class SoapBase implements SoapInterface
         $this->encriptPrivateKey = $encript;
         return $this->encriptPrivateKey;
     }
-
+   
     /**
      * Set another temporayfolder for saving certificates for SOAP utilization
      * @param string | null $folderRealPath
@@ -258,7 +258,7 @@ abstract class SoapBase implements SoapInterface
      */
     public function setTemporaryFolder($folderRealPath = null)
     {
-        $mapto = $this->certificate->getCnpj() ?? $this->certificate->getCpf();
+        $mapto = $this->certificate->getCnpj() ? $this->certificate->getCpf() : null;
         if (empty($mapto)) {
             throw new RuntimeException(
                 'Foi impossivel identificar o OID do CNPJ ou do CPF.'
@@ -267,10 +267,10 @@ abstract class SoapBase implements SoapInterface
         if (empty($folderRealPath)) {
             $path = '/sped-'
                 . $this->uid()
-                . '/'
+                .'/'
                 . $mapto
                 . '/' ;
-            $folderRealPath = sys_get_temp_dir() . $path;
+            $folderRealPath = sys_get_temp_dir().$path;
         }
         if (substr($folderRealPath, -1) !== '/') {
             $folderRealPath .= '/';
@@ -278,7 +278,7 @@ abstract class SoapBase implements SoapInterface
         $this->tempdir = $folderRealPath;
         $this->setLocalFolder($folderRealPath);
     }
-
+    
     /**
      * Return uid from user
      * @return string
@@ -291,7 +291,7 @@ abstract class SoapBase implements SoapInterface
             return getmyuid();
         }
     }
-
+ 
     /**
      * Set Local folder for flysystem
      * @param string $folder
@@ -463,10 +463,12 @@ abstract class SoapBase implements SoapInterface
             return '';
         }
         $headerItems = '';
-        foreach ($header->data as $key => $value) {
-            $headerItems .= '<' . $key . '>' . $value . '</' . $key . '>';
+        if (is_array($header->data)) {
+            foreach ($header->data as $key => $value) {
+                $headerItems .= '<' . $key . '>' . $value . '</' . $key . '>';
+            }
         }
-        return sprintf(
+        $headerStr = sprintf(
             '<%s:Header><%s xmlns="%s">%s</%s></%s:Header>',
             $envelopPrefix,
             $header->name,
@@ -475,6 +477,8 @@ abstract class SoapBase implements SoapInterface
             $header->name,
             $envelopPrefix
         );
+
+        return str_replace('< xmlns=""></>', '', $headerStr); //Evitando Header Vazio, erro 500 Webservice Bauru/SP
     }
 
     /**
@@ -546,7 +550,7 @@ abstract class SoapBase implements SoapInterface
             );
         }
     }
-
+    
     /**
      * Create a unique random file name
      * @param integer $n
@@ -558,7 +562,7 @@ abstract class SoapBase implements SoapInterface
         if (!$this->filesystem->has($name)) {
             return $name;
         }
-        $this->randomName($n + 5);
+        $this->randomName($n+5);
     }
 
     /**
@@ -578,7 +582,7 @@ abstract class SoapBase implements SoapInterface
             //remove todos os arquivos antigos
             $contents = $this->filesystem->listContents($this->certsdir, true);
             $dt = new \DateTime();
-            $tint = new \DateInterval("PT" . $this->waitingTime . "M");
+            $tint = new \DateInterval("PT".$this->waitingTime."M");
             $tint->invert = 1;
             $tsLimit = $dt->add($tint)->getTimestamp();
             foreach ($contents as $item) {
